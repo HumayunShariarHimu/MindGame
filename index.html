@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="bn">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MindQuest — Full Game Mode</title>
+  <style>
+    :root {
+      --bg: #071027;
+      --panel: #0b1530;
+      --accent: #ff6b6b;
+      --accent2: #7c3aed;
+      --muted: #9fb0c8;
+    }
+    * { box-sizing: border-box; font-family: 'Noto Sans Bengali', sans-serif; }
+    body {
+      background: radial-gradient(1000px 600px at 10% 10%, #0a1b2e 0%, #071027 40%), linear-gradient(180deg,#041329 0%, #071027 100%);
+      color: #e8f1fb; margin: 0; padding: 0;
+    }
+    .wrap { max-width: 1000px; margin: auto; padding: 20px; }
+    .card {
+      background: rgba(255,255,255,0.05);
+      border-radius: 14px;
+      padding: 15px;
+      margin-top: 15px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    }
+    .btn {
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      border: none; border-radius: 8px;
+      color: white; padding: 8px 12px; cursor: pointer;
+      font-weight: bold;
+    }
+    .progress {
+      background: var(--accent);
+      height: 10px; border-radius: 999px;
+    }
+    .bar {
+      background: rgba(255,255,255,0.2);
+      border-radius: 999px; overflow: hidden;
+    }
+    .quest { background: rgba(255,255,255,0.08); padding: 10px; border-radius: 8px; margin-top: 5px; display: flex; justify-content: space-between; align-items: center; }
+    .badge { background: rgba(255,255,255,0.08); padding: 5px 8px; border-radius: 6px; margin: 4px; display:inline-block; }
+    #runner { width: 40px; height: 40px; background: white; color: black; display: flex; justify-content: center; align-items: center; border-radius: 8px; position: absolute; bottom: 40px; left: 10px; font-weight: bold; }
+    .zone { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 200px; height: 70px; border: 2px dashed var(--accent2); display: flex; justify-content: center; align-items: center; border-radius: 10px; color: var(--accent2); }
+    .minigame { position: relative; height: 200px; background: rgba(255,255,255,0.05); border-radius: 10px; margin-top: 10px; overflow: hidden; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>🎮 MindQuest — Success Game</h1>
+    <p>তোমার জীবনের প্রতিটি কাজ এখন গেম! কুইস্ট সম্পূর্ণ করো, XP অর্জন করো, লেভেল আপ করো 🚀</p>
+
+    <div class="card">
+      <h3>🎯 দৈনিক কুইস্ট</h3>
+      <div id="quests"></div>
+      <button class="btn" id="addQuest">+ নতুন কুইস্ট</button>
+    </div>
+
+    <div class="card">
+      <h3>🏆 অগ্রগতি</h3>
+      <p>লেভেল: <span id="level">1</span> | XP: <span id="xp">0</span></p>
+      <div class="bar"><div id="xpbar" class="progress" style="width:0%"></div></div>
+      <p>স্ট্রিক: <span id="streak">0</span> দিন</p>
+    </div>
+
+    <div class="card">
+      <h3>🕹️ মিনি গেম</h3>
+      <div class="minigame">
+        <div id="runner">▶</div>
+        <div class="zone">🎯 জোন</div>
+      </div>
+      <button class="btn" id="playMini">খেলা শুরু</button>
+      <button class="btn" id="stopMini">থামাও</button>
+      <p>সেরা স্কোর: <span id="best">0</span></p>
+    </div>
+
+    <div class="card">
+      <h3>🏅 ব্যাজ</h3>
+      <div id="badges"></div>
+    </div>
+
+  </div>
+
+<script>
+const state = JSON.parse(localStorage.getItem("mindquest")) || {
+  xp: 0, level: 1, streak: 0, best: 0,
+  quests: [
+    {title: "২৫ মিনিট ফোকাস", done: false, xp: 20},
+    {title: "৫ মিনিট ধ্যান", done: false, xp: 15},
+    {title: "১টি ভালো কাজ", done: false, xp: 25}
+  ],
+  badges: []
+};
+
+function save() {
+  localStorage.setItem("mindquest", JSON.stringify(state));
+  render();
+}
+
+function render() {
+  document.getElementById("xp").innerText = state.xp;
+  document.getElementById("level").innerText = state.level;
+  document.getElementById("streak").innerText = state.streak;
+  document.getElementById("best").innerText = state.best;
+  document.getElementById("xpbar").style.width = Math.min(100, (state.xp / (state.level*100))*100) + "%";
+  
+  const qDiv = document.getElementById("quests");
+  qDiv.innerHTML = "";
+  state.quests.forEach((q,i)=>{
+    const d=document.createElement("div");
+    d.className="quest";
+    d.innerHTML=`<span>${q.done?"✅":"⬜"} ${q.title}</span><button class='btn'>${q.done?"Undo":"Complete"}</button>`;
+    d.querySelector("button").onclick=()=>{
+      if(!q.done){ state.xp+=q.xp; state.streak++; checkLevel(); }
+      q.done=!q.done; save();
+    };
+    qDiv.appendChild(d);
+  });
+
+  document.getElementById("badges").innerHTML = state.badges.map(b=>`<span class='badge'>${b}</span>`).join("");
+}
+
+function checkLevel() {
+  if(state.xp >= state.level*100){
+    state.level++;
+    state.badges.push("Level "+state.level+" 🎉");
+  }
+}
+
+document.getElementById("addQuest").onclick=()=>{
+  const t=prompt("নতুন কুইস্ট লিখো:");
+  if(!t) return;
+  state.quests.push({title:t,done:false,xp:20});
+  save();
+};
+
+// ===== Mini game =====
+let running=false, runner=document.getElementById("runner"), dir=1, pos=10, timer=null, score=0;
+function startMini(){
+  if(running) return;
+  running=true; score=0;
+  timer=setInterval(()=>{
+    pos+=dir*4;
+    if(pos>600){dir=-1;}
+    if(pos<10){dir=1;}
+    runner.style.left=pos+"px";
+  },16);
+}
+function stopMini(){
+  running=false; clearInterval(timer);
+}
+runner.onclick=()=>{
+  const zone=document.querySelector(".zone").getBoundingClientRect();
+  const r=runner.getBoundingClientRect();
+  const center=r.left + r.width/2;
+  if(center>zone.left && center<zone.right){
+    score++;
+    state.xp+=5;
+    if(score>state.best){state.best=score;}
+    if(score==5) state.badges.push("Sharpshooter 🎯");
+  } else {
+    score=0;
+  }
+  save();
+};
+document.getElementById("playMini").onclick=startMini;
+document.getElementById("stopMini").onclick=stopMini;
+
+render();
+</script>
+</body>
+</html>
